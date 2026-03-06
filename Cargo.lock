@@ -16,6 +16,7 @@ dependencies = [
  "sha2",
  "tower-service",
  "uuid",
+ "wasm-bindgen",
  "worker",
  "worker-macros",
 ]

@@ -28,69 +28,58 @@ pub fn generate_api_key() -> String {
 impl<S> FromRequestParts<S> for AuthAgent
 where
     S: Send + Sync,
-    Arc<worker::Env>: FromRequestParts<S>,
 {
     type Rejection = AppError;
 
-    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
-        // Extract Bearer token from Authorization header
-        let auth_header = parts
-            .headers
-            .get("authorization")
-            .and_then(|v| v.to_str().ok())
-            .ok_or_else(|| AppError::unauthorized("Missing Authorization header"))?;
-
-        let api_key = auth_header
-            .strip_prefix("Bearer ")
-            .ok_or_else(|| AppError::unauthorized("Invalid Authorization format. Use: Bearer YOUR_API_KEY"))?;
-
-        let key_hash = hash_api_key(api_key);
-
-        // Get Env from extensions (set by our main handler)
-        let env = parts
+    async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
+        parts
             .extensions
-            .get::<Arc<worker::Env>>()
-            .ok_or_else(|| AppError::internal("Missing environment"))?;
+            .get::<AuthAgent>()
+            .cloned()
+            .ok_or_else(|| AppError::unauthorized("Missing or invalid API key"))
+    }
+}
 
-        // Try KV cache first
-        let kv = env.kv("KV").map_err(|e| AppError::internal(&format!("KV error: {}", e)))?;
-        let cache_key = format!("apikey:{}", key_hash);
+/// Attempts to authenticate a request using Bearer token, checking KV cache then D1.
+/// Called in the fetch handler before routing so async WASM futures stay outside axum extractors.
+pub async fn try_authenticate(parts: &Parts, env: &Arc<worker::Env>) -> Option<AuthAgent> {
+    let api_key = parts
+        .headers
+        .get("authorization")
+        .and_then(|v| v.to_str().ok())?
+        .strip_prefix("Bearer ")?;
 
-        if let Ok(Some(cached)) = kv.get(&cache_key).text().await {
-            // cached value is "agent_id:agent_name"
-            if let Some((id, name)) = cached.split_once(':') {
-                return Ok(AuthAgent {
-                    id: id.to_string(),
-                    name: name.to_string(),
-                });
-            }
-        }
+    let key_hash = hash_api_key(api_key);
 
-        // Fallback to D1
-        let db = env.d1("DB").map_err(|e| AppError::internal(&format!("DB error: {}", e)))?;
-        let stmt = db.prepare("SELECT id, name FROM agents WHERE api_key_hash = ?1 AND is_active = 1");
-        let result = stmt
-            .bind(&[key_hash.clone().into()])
-            .map_err(|e| AppError::internal(&format!("Bind error: {}", e)))?
-            .first::<serde_json::Value>(None)
-            .await
-            .map_err(|e| AppError::internal(&format!("Query error: {}", e)))?;
+    let kv = env.kv("KV").ok()?;
+    let cache_key = format!("apikey:{}", key_hash);
 
-        match result {
-            Some(row) => {
-                let id = row["id"].as_str().unwrap_or_default().to_string();
-                let name = row["name"].as_str().unwrap_or_default().to_string();
-
-                // Cache in KV for 5 minutes
-                let cache_value = format!("{}:{}", id, name);
-                let _ = kv
-                    .put(&cache_key, &cache_value)
-                    .map(|p| p.expiration_ttl(300))
-                    .ok();
-
-                Ok(AuthAgent { id, name })
-            }
-            None => Err(AppError::unauthorized("Invalid API key")),
+    if let Ok(Some(cached)) = kv.get(&cache_key).text().await {
+        if let Some((id, name)) = cached.split_once(':') {
+            return Some(AuthAgent {
+                id: id.to_string(),
+                name: name.to_string(),
+            });
         }
     }
+
+    let db = env.d1("DB").ok()?;
+    let result = db
+        .prepare("SELECT id, name FROM agents WHERE api_key_hash = ?1 AND is_active = 1")
+        .bind(&[key_hash.clone().into()])
+        .ok()?
+        .first::<serde_json::Value>(None)
+        .await
+        .ok()??;
+
+    let id = result["id"].as_str()?.to_string();
+    let name = result["name"].as_str()?.to_string();
+
+    let cache_value = format!("{}:{}", id, name);
+    let _ = kv
+        .put(&cache_key, &cache_value)
+        .map(|p| p.expiration_ttl(300))
+        .ok();
+
+    Some(AuthAgent { id, name })
 }
