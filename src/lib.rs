@@ -12,6 +12,7 @@ mod error;
 mod models;
 mod rate_limit;
 mod routes;
+mod validation;
 mod wasm_send;
 
 fn router(env: Arc<Env>) -> Router {

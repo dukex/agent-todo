@@ -10,6 +10,7 @@ use crate::auth::AuthAgent;
 use crate::error::AppError;
 use crate::models::*;
 use crate::routes::projects::check_member;
+use crate::validation;
 use crate::wasm_send::WasmSend;
 
 /// POST /api/v1/tasks/:task_id/comments
@@ -20,9 +21,7 @@ pub fn create(
     Json(body): Json<CreateCommentRequest>,
 ) -> impl Future<Output = Result<impl IntoResponse, AppError>> + Send {
     WasmSend(async move {
-        if body.content.is_empty() || body.content.len() > 5000 {
-            return Err(AppError::bad_request("Comment must be 1-5000 characters"));
-        }
+        validation::validate_required_text("content", &body.content, 5000)?;
 
         let db = env.d1("DB").map_err(AppError::from)?;
 

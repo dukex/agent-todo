@@ -10,6 +10,7 @@ use crate::auth::AuthAgent;
 use crate::error::AppError;
 use crate::models::*;
 use crate::routes::projects::check_member;
+use crate::validation;
 use crate::wasm_send::WasmSend;
 
 /// POST /api/v1/projects/:id/labels
@@ -20,9 +21,8 @@ pub fn create(
     Json(body): Json<CreateLabelRequest>,
 ) -> impl Future<Output = Result<impl IntoResponse, AppError>> + Send {
     WasmSend(async move {
-        if body.name.is_empty() || body.name.len() > 50 {
-            return Err(AppError::bad_request("Label name must be 1-50 characters"));
-        }
+        validation::validate_required_text("name", &body.name, 50)?;
+        validation::validate_hex_color(&body.color)?;
 
         let db = env.d1("DB").map_err(AppError::from)?;
         check_member(&db, &project_id, &auth.id).await?;
@@ -85,12 +85,14 @@ pub fn update(
         check_member(&db, project_id, &auth.id).await?;
 
         if let Some(ref name) = body.name {
+            validation::validate_required_text("name", name, 50)?;
             db.prepare("UPDATE labels SET name = ?1 WHERE id = ?2")
                 .bind(&[name.clone().into(), label_id.clone().into()])
                 .map_err(|e| AppError::internal(&e.to_string()))?
                 .run().await.map_err(|e| AppError::internal(&e.to_string()))?;
         }
         if let Some(ref color) = body.color {
+            validation::validate_hex_color(color)?;
             db.prepare("UPDATE labels SET color = ?1 WHERE id = ?2")
                 .bind(&[color.clone().into(), label_id.clone().into()])
                 .map_err(|e| AppError::internal(&e.to_string()))?

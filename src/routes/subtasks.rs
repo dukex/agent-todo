@@ -11,6 +11,7 @@ use crate::auth::AuthAgent;
 use crate::error::AppError;
 use crate::models::*;
 use crate::routes::projects::check_member;
+use crate::validation;
 use crate::wasm_send::WasmSend;
 
 /// POST /api/v1/tasks/:task_id/subtasks
@@ -21,9 +22,7 @@ pub fn create(
     Json(body): Json<CreateSubtaskRequest>,
 ) -> impl Future<Output = Result<impl IntoResponse, AppError>> + Send {
     WasmSend(async move {
-        if body.title.is_empty() || body.title.len() > 300 {
-            return Err(AppError::bad_request("Title must be 1-300 characters"));
-        }
+        validation::validate_required_text("title", &body.title, 300)?;
 
         let db = env.d1("DB").map_err(AppError::from)?;
 
@@ -77,15 +76,14 @@ pub fn update(
         check_member(&db, project_id, &auth.id).await?;
 
         if let Some(ref title) = body.title {
+            validation::validate_required_text("title", title, 300)?;
             db.prepare("UPDATE subtasks SET title = ?1 WHERE id = ?2")
                 .bind(&[title.clone().into(), subtask_id.clone().into()])
                 .map_err(|e| AppError::internal(&e.to_string()))?
                 .run().await.map_err(|e| AppError::internal(&e.to_string()))?;
         }
         if let Some(ref status) = body.status {
-            if status != "pending" && status != "done" {
-                return Err(AppError::bad_request("Subtask status must be: pending or done"));
-            }
+            validation::validate_subtask_status(status)?;
             db.prepare("UPDATE subtasks SET status = ?1 WHERE id = ?2")
                 .bind(&[status.clone().into(), subtask_id.clone().into()])
                 .map_err(|e| AppError::internal(&e.to_string()))?

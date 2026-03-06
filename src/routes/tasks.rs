@@ -11,6 +11,7 @@ use crate::auth::AuthAgent;
 use crate::error::AppError;
 use crate::models::*;
 use crate::routes::projects::check_member;
+use crate::validation;
 use crate::wasm_send::WasmSend;
 
 /// POST /api/v1/projects/:id/tasks
@@ -21,9 +22,10 @@ pub fn create(
     Json(body): Json<CreateTaskRequest>,
 ) -> impl Future<Output = Result<impl IntoResponse, AppError>> + Send {
     WasmSend(async move {
-        if body.title.is_empty() || body.title.len() > 500 {
-            return Err(AppError::bad_request("Title must be 1-500 characters"));
-        }
+        validation::validate_required_text("title", &body.title, 500)?;
+        validation::validate_optional_text("description", &Some(body.description.clone()), 10000)?;
+        validation::validate_task_status(&body.status)?;
+        validation::validate_priority(body.priority)?;
 
         let db = env.d1("DB").map_err(AppError::from)?;
         check_member(&db, &project_id, &auth.id).await?;
@@ -226,31 +228,28 @@ pub fn update(
         let now = chrono::Utc::now().to_rfc3339();
 
         if let Some(ref title) = body.title {
+            validation::validate_required_text("title", title, 500)?;
             db.prepare("UPDATE tasks SET title = ?1, updated_at = ?2 WHERE id = ?3")
                 .bind(&[title.clone().into(), now.clone().into(), task_id.clone().into()])
                 .map_err(|e| AppError::internal(&e.to_string()))?
                 .run().await.map_err(|e| AppError::internal(&e.to_string()))?;
         }
         if let Some(ref desc) = body.description {
+            validation::validate_optional_text("description", &Some(desc.clone()), 10000)?;
             db.prepare("UPDATE tasks SET description = ?1, updated_at = ?2 WHERE id = ?3")
                 .bind(&[desc.clone().into(), now.clone().into(), task_id.clone().into()])
                 .map_err(|e| AppError::internal(&e.to_string()))?
                 .run().await.map_err(|e| AppError::internal(&e.to_string()))?;
         }
         if let Some(ref status) = body.status {
-            let valid = ["pending", "in_progress", "done", "cancelled"];
-            if !valid.contains(&status.as_str()) {
-                return Err(AppError::bad_request("Status must be: pending, in_progress, done, or cancelled"));
-            }
+            validation::validate_task_status(status)?;
             db.prepare("UPDATE tasks SET status = ?1, updated_at = ?2 WHERE id = ?3")
                 .bind(&[status.clone().into(), now.clone().into(), task_id.clone().into()])
                 .map_err(|e| AppError::internal(&e.to_string()))?
                 .run().await.map_err(|e| AppError::internal(&e.to_string()))?;
         }
         if let Some(priority) = body.priority {
-            if !(1..=5).contains(&priority) {
-                return Err(AppError::bad_request("Priority must be 1-5"));
-            }
+            validation::validate_priority(priority)?;
             db.prepare("UPDATE tasks SET priority = ?1, updated_at = ?2 WHERE id = ?3")
                 .bind(&[JsValue::from(priority), now.clone().into(), task_id.clone().into()])
                 .map_err(|e| AppError::internal(&e.to_string()))?

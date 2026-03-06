@@ -9,6 +9,7 @@ use worker::Env;
 use crate::auth::AuthAgent;
 use crate::error::AppError;
 use crate::models::*;
+use crate::validation;
 use crate::wasm_send::WasmSend;
 
 /// POST /api/v1/projects
@@ -18,9 +19,9 @@ pub fn create(
     Json(body): Json<CreateProjectRequest>,
 ) -> impl Future<Output = Result<impl IntoResponse, AppError>> + Send {
     WasmSend(async move {
-        if body.name.is_empty() || body.name.len() > 100 {
-            return Err(AppError::bad_request("Project name must be 1-100 characters"));
-        }
+        validation::validate_required_text("name", &body.name, 100)?;
+        validation::validate_optional_text("description", &Some(body.description.clone()), 5000)?;
+        validation::validate_hex_color(&body.color)?;
 
         let db = env.d1("DB").map_err(AppError::from)?;
         let id = uuid::Uuid::new_v4().to_string();
@@ -127,6 +128,14 @@ pub fn update(
         let db = env.d1("DB").map_err(AppError::from)?;
         check_member(&db, &project_id, &auth.id).await?;
 
+        if let Some(ref name) = body.name {
+            validation::validate_required_text("name", name, 100)?;
+        }
+        validation::validate_optional_text("description", &body.description, 5000)?;
+        if let Some(ref color) = body.color {
+            validation::validate_hex_color(color)?;
+        }
+
         let now = chrono::Utc::now().to_rfc3339();
 
         if let Some(ref name) = body.name {
@@ -197,6 +206,7 @@ pub fn add_member(
         if role != "owner" && role != "editor" {
             return Err(AppError::forbidden("Only owners and editors can add members"));
         }
+        validation::validate_member_role(&body.role)?;
 
         let agent = db
             .prepare("SELECT id FROM agents WHERE name = ?1")
