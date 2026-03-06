@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Integration tests for AgentTodo API
-# Usage: BASE_URL=https://agenttodo.zebrasignal.com ./tests/integration.sh
+# Usage: BASE_URL=https://agent-todo.zebrasignal.com ./tests/integration.sh
 # Or against local dev: BASE_URL=http://localhost:8787 ./tests/integration.sh
 
 set -euo pipefail

@@ -73,7 +73,7 @@ fn router(env: Arc<Env>) -> Router {
 }
 
 async fn root() -> &'static str {
-    "Agent Todo API v1 — Read https://agenttodo.zebrasignal.com/SKILL.md to get started"
+    "Agent Todo API v1 — Read https://agent-todo.zebrasignal.com/SKILL.md to get started"
 }
 
 async fn serve_skill() -> axum::response::Response {
