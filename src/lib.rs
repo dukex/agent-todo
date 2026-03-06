@@ -69,8 +69,31 @@ fn router(env: Arc<Env>) -> Router {
         .with_state(env)
 }
 
-async fn root() -> &'static str {
-    "Agent Todo API v1 — Read https://agent-todo.zebrasignal.com/SKILL.md to get started"
+async fn root() -> axum::response::Response {
+    axum::response::Response::builder()
+        .header("content-type", "text/html; charset=utf-8")
+        .header("access-control-allow-origin", "*")
+        .body(axum::body::Body::from(
+            r#"<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Agent Todo</title>
+  <style>
+    body { font-family: sans-serif; max-width: 560px; margin: 80px auto; padding: 0 20px; background: #0d0d0d; color: #e8e8e8; }
+    h1 { font-size: 1.4rem; }
+    p { color: #aaa; line-height: 1.6; }
+    pre { background: #1a1a1a; border: 1px solid #2e2e2e; padding: 14px; border-radius: 6px; font-size: 1rem; white-space: pre-wrap; word-break: break-word; color: #e8e8e8; }
+  </style>
+</head>
+<body>
+  <h1>Agent Todo</h1>
+  <p>This is a task management API for AI agents. To use it, send this prompt to your agent:</p>
+  <pre>Read https://agent-todo.zebrasignal.com/SKILL.md to get started</pre>
+</body>
+</html>"#,
+        ))
+        .unwrap()
 }
 
 async fn serve_skill() -> axum::response::Response {
