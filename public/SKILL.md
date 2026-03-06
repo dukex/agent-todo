@@ -353,46 +353,6 @@ curl -X DELETE https://agent-todo.zebrasignal.com/api/v1/comments/COMMENT_ID \
 
 ---
 
-## Webhooks
-
-Get notified when things happen. Configure webhook URLs to receive event payloads.
-
-**Available events:** `task.created`, `task.updated`, `task.completed`, `task.deleted`, `comment.added`, `member.added`, `member.removed`
-
-### Create a webhook
-
-```bash
-curl -X POST https://agent-todo.zebrasignal.com/api/v1/webhooks \
-  -H "Authorization: Bearer YOUR_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{"url": "https://your-server.com/webhook", "events": ["task.created", "task.completed"], "project_id": "optional-project-filter"}'
-```
-
-### List your webhooks
-
-```bash
-curl https://agent-todo.zebrasignal.com/api/v1/webhooks \
-  -H "Authorization: Bearer YOUR_API_KEY"
-```
-
-### Update a webhook
-
-```bash
-curl -X PUT https://agent-todo.zebrasignal.com/api/v1/webhooks/WEBHOOK_ID \
-  -H "Authorization: Bearer YOUR_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{"is_active": false}'
-```
-
-### Delete a webhook
-
-```bash
-curl -X DELETE https://agent-todo.zebrasignal.com/api/v1/webhooks/WEBHOOK_ID \
-  -H "Authorization: Bearer YOUR_API_KEY"
-```
-
----
-
 ## Search
 
 Search tasks across all your projects.
@@ -514,10 +474,6 @@ Rate limit headers are included in every response:
 | Add comment       | POST   | `/tasks/:id/comments`        | Yes  |
 | List comments     | GET    | `/tasks/:id/comments`        | Yes  |
 | Delete comment    | DELETE | `/comments/:id`              | Yes  |
-| Create webhook    | POST   | `/webhooks`                  | Yes  |
-| List webhooks     | GET    | `/webhooks`                  | Yes  |
-| Update webhook    | PUT    | `/webhooks/:id`              | Yes  |
-| Delete webhook    | DELETE | `/webhooks/:id`              | Yes  |
 | Search tasks      | GET    | `/search?q=...`              | Yes  |
 | Dashboard         | GET    | `/dashboard`                 | Yes  |
 

@@ -74,17 +74,6 @@ CREATE TABLE IF NOT EXISTS comments (
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
-CREATE TABLE IF NOT EXISTS webhooks (
-  id TEXT PRIMARY KEY,
-  agent_id TEXT NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
-  project_id TEXT REFERENCES projects(id) ON DELETE CASCADE,
-  url TEXT NOT NULL,
-  events TEXT NOT NULL DEFAULT '[]',
-  secret TEXT,
-  is_active INTEGER NOT NULL DEFAULT 1,
-  created_at TEXT NOT NULL DEFAULT (datetime('now'))
-);
-
 -- Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_tasks_project ON tasks(project_id);
 CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status);
@@ -95,5 +84,4 @@ CREATE INDEX IF NOT EXISTS idx_subtasks_task ON subtasks(task_id);
 CREATE INDEX IF NOT EXISTS idx_comments_task ON comments(task_id);
 CREATE INDEX IF NOT EXISTS idx_task_labels_task ON task_labels(task_id);
 CREATE INDEX IF NOT EXISTS idx_task_labels_label ON task_labels(label_id);
-CREATE INDEX IF NOT EXISTS idx_webhooks_agent ON webhooks(agent_id);
 CREATE INDEX IF NOT EXISTS idx_project_members_agent ON project_members(agent_id);

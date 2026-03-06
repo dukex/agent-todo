@@ -55,11 +55,6 @@ fn router(env: Arc<Env>) -> Router {
         .route("/tasks/{id}/comments", post(routes::comments::create))
         .route("/tasks/{id}/comments", get(routes::comments::list))
         .route("/comments/{id}", delete(routes::comments::delete))
-        // Webhooks
-        .route("/webhooks", post(routes::webhooks::create))
-        .route("/webhooks", get(routes::webhooks::list))
-        .route("/webhooks/{id}", put(routes::webhooks::update))
-        .route("/webhooks/{id}", delete(routes::webhooks::delete))
         // Search
         .route("/search", get(routes::search::search))
         // Dashboard

@@ -230,34 +230,6 @@ pub struct CreateCommentRequest {
     pub content: String,
 }
 
-// ── Webhooks ────────────────────────────────────────────────────────
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct Webhook {
-    pub id: String,
-    pub agent_id: String,
-    pub project_id: Option<String>,
-    pub url: String,
-    pub events: Vec<String>,
-    pub is_active: bool,
-    pub created_at: String,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct CreateWebhookRequest {
-    pub url: String,
-    pub events: Vec<String>,
-    pub project_id: Option<String>,
-    pub secret: Option<String>,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct UpdateWebhookRequest {
-    pub url: Option<String>,
-    pub events: Option<Vec<String>>,
-    pub is_active: Option<bool>,
-}
-
 // ── Search ──────────────────────────────────────────────────────────
 
 #[derive(Debug, Deserialize)]
