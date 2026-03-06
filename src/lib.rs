@@ -10,6 +10,7 @@ mod auth;
 mod db;
 mod error;
 mod models;
+mod rate_limit;
 mod routes;
 mod wasm_send;
 
@@ -92,7 +93,16 @@ async fn fetch(
     parts.extensions.insert(env.clone());
 
     if let Some(agent) = auth::try_authenticate(&parts, &env).await {
-        parts.extensions.insert(agent);
+        match rate_limit::check_rate_limit(&agent.id, &parts.method, &env).await {
+            Ok(info) => {
+                parts.extensions.insert(agent);
+                let req = axum::http::Request::from_parts(parts, body);
+                let mut response = router(env).call(req).await?;
+                rate_limit::add_rate_limit_headers(&mut response, &info);
+                return Ok(response);
+            }
+            Err(rate_limited_response) => return Ok(rate_limited_response),
+        }
     }
 
     let req = axum::http::Request::from_parts(parts, body);

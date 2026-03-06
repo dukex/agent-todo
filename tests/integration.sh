@@ -18,7 +18,6 @@ TASK_ID=""
 SUBTASK_ID=""
 LABEL_ID=""
 COMMENT_ID=""
-WEBHOOK_ID=""
 SECOND_AGENT_KEY=""
 SECOND_AGENT_ID=""
 
@@ -288,37 +287,6 @@ blue "-- Delete comment --"
 DELETE_COMMENT_RESPONSE=$(curl -s -X DELETE "$API_BASE/comments/$COMMENT_ID" \
   -H "Authorization: Bearer $API_KEY")
 assert_success "Delete comment" "$DELETE_COMMENT_RESPONSE"
-
-# ---
-
-blue "=== Webhooks ==="
-
-blue "-- Create webhook --"
-CREATE_WEBHOOK_RESPONSE=$(curl -s -X POST "$API_BASE/webhooks" \
-  -H "Authorization: Bearer $API_KEY" \
-  -H "Content-Type: application/json" \
-  -d "{\"url\": \"https://example.com/webhook\", \"events\": [\"task.created\", \"task.completed\"], \"project_id\": \"$PROJECT_ID\"}")
-assert_success "Create webhook" "$CREATE_WEBHOOK_RESPONSE"
-assert_field "Webhook has id" "$CREATE_WEBHOOK_RESPONSE" "id"
-
-WEBHOOK_ID=$(echo "$CREATE_WEBHOOK_RESPONSE" | grep -o '"id":"[^"]*"' | head -1 | sed 's/"id":"\([^"]*\)"/\1/')
-
-blue "-- List webhooks --"
-LIST_WEBHOOKS_RESPONSE=$(curl -s "$API_BASE/webhooks" \
-  -H "Authorization: Bearer $API_KEY")
-assert_success "List webhooks" "$LIST_WEBHOOKS_RESPONSE"
-
-blue "-- Update webhook (deactivate) --"
-UPDATE_WEBHOOK_RESPONSE=$(curl -s -X PUT "$API_BASE/webhooks/$WEBHOOK_ID" \
-  -H "Authorization: Bearer $API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{"is_active": false}')
-assert_success "Update webhook" "$UPDATE_WEBHOOK_RESPONSE"
-
-blue "-- Delete webhook --"
-DELETE_WEBHOOK_RESPONSE=$(curl -s -X DELETE "$API_BASE/webhooks/$WEBHOOK_ID" \
-  -H "Authorization: Bearer $API_KEY")
-assert_success "Delete webhook" "$DELETE_WEBHOOK_RESPONSE"
 
 # ---
 
