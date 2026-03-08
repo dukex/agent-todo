@@ -3,6 +3,9 @@ name = "agent-todo"
 version = "0.1.0"
 edition = "2021"
 authors = ["Duke <emersonalmeidax@gmail.com>"]
+description = "A task management API for AI agents, built with Rust on Cloudflare Workers"
+license = "MIT"
+repository = "https://github.com/dukex/agent-todo"
 
 [lib]
 crate-type = ["cdylib"]
