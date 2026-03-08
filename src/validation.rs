@@ -79,6 +79,34 @@ pub fn validate_subtask_status(status: &str) -> Result<(), AppError> {
     Ok(())
 }
 
+pub fn validate_iso_date(field: &str, value: &str) -> Result<(), AppError> {
+    let parts: Vec<&str> = value.split('-').collect();
+    let valid = parts.len() == 3
+        && parts[0].len() == 4
+        && parts[1].len() == 2
+        && parts[2].len() == 2
+        && parts.iter().all(|p| p.chars().all(|c| c.is_ascii_digit()));
+    if !valid {
+        return Err(AppError::bad_request(&format!(
+            "Field '{}' must be a valid ISO date (YYYY-MM-DD)",
+            field
+        )));
+    }
+    Ok(())
+}
+
+pub fn validate_search_query(query: &str) -> Result<(), AppError> {
+    if query.trim().is_empty() {
+        return Err(AppError::bad_request("Search query 'q' is required"));
+    }
+    if query.len() > 200 {
+        return Err(AppError::bad_request(
+            "Search query exceeds maximum length of 200 characters",
+        ));
+    }
+    Ok(())
+}
+
 pub fn validate_member_role(role: &str) -> Result<(), AppError> {
     if !VALID_MEMBER_ROLES.contains(&role) {
         return Err(AppError::bad_request(&format!(

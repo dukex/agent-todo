@@ -7,7 +7,6 @@ use tower_service::Service;
 use worker::*;
 
 mod auth;
-mod db;
 mod error;
 mod models;
 mod rate_limit;
@@ -115,6 +114,17 @@ async fn fetch(
 
     let (mut parts, body) = req.into_parts();
     parts.extensions.insert(env.clone());
+
+    if parts.uri.path() == "/api/v1/agents/register" {
+        let ip = parts
+            .headers
+            .get("cf-connecting-ip")
+            .and_then(|v| v.to_str().ok())
+            .unwrap_or("unknown");
+        if let Err(rate_limited_response) = rate_limit::check_register_rate_limit(ip, &env).await {
+            return Ok(rate_limited_response);
+        }
+    }
 
     if let Some(agent) = auth::try_authenticate(&parts, &env).await {
         match rate_limit::check_rate_limit(&agent.id, &parts.method, &env).await {

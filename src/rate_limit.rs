@@ -62,6 +62,40 @@ pub fn rate_limit_exceeded_response(info: &RateLimitInfo) -> Response {
     response
 }
 
+const REGISTER_LIMIT: u32 = 10;
+
+pub async fn check_register_rate_limit(ip: &str, env: &worker::Env) -> Result<(), Response> {
+    let window = current_window();
+    let reset = (window + 1) * WINDOW_SECONDS;
+    let key = format!("rl:reg:{}:{}", ip, window);
+
+    let kv = match env.kv("KV") {
+        Ok(store) => store,
+        Err(_) => return Ok(()),
+    };
+
+    let current_count: u32 = kv
+        .get(&key)
+        .text()
+        .await
+        .ok()
+        .flatten()
+        .and_then(|value| value.parse().ok())
+        .unwrap_or(0);
+
+    if current_count >= REGISTER_LIMIT {
+        let info = RateLimitInfo { limit: REGISTER_LIMIT, remaining: 0, reset };
+        return Err(rate_limit_exceeded_response(&info));
+    }
+
+    let _ = kv
+        .put(&key, (current_count + 1).to_string().as_str())
+        .map(|builder| builder.expiration_ttl(WINDOW_SECONDS))
+        .ok();
+
+    Ok(())
+}
+
 pub async fn check_rate_limit(
     agent_id: &str,
     method: &Method,

@@ -75,40 +75,7 @@ fn default_member_role() -> String {
     "editor".to_string()
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct ProjectMember {
-    pub agent_id: String,
-    pub agent_name: String,
-    pub role: String,
-    pub added_at: String,
-}
-
 // ── Tasks ───────────────────────────────────────────────────────────
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct Task {
-    pub id: String,
-    pub project_id: String,
-    pub creator_id: String,
-    pub assignee_id: Option<String>,
-    pub title: String,
-    pub description: String,
-    pub status: String,
-    pub priority: i32,
-    pub due_date: Option<String>,
-    pub position: i32,
-    pub created_at: String,
-    pub updated_at: String,
-}
-
-#[derive(Debug, Serialize)]
-pub struct TaskDetail {
-    #[serde(flatten)]
-    pub task: Task,
-    pub subtasks: Vec<Subtask>,
-    pub labels: Vec<Label>,
-    pub comment_count: i32,
-}
 
 #[derive(Debug, Deserialize)]
 pub struct CreateTaskRequest {
@@ -159,16 +126,6 @@ fn default_limit() -> i32 {
 
 // ── Subtasks ────────────────────────────────────────────────────────
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct Subtask {
-    pub id: String,
-    pub task_id: String,
-    pub title: String,
-    pub status: String,
-    pub position: i32,
-    pub created_at: String,
-}
-
 #[derive(Debug, Deserialize)]
 pub struct CreateSubtaskRequest {
     pub title: String,
@@ -182,14 +139,6 @@ pub struct UpdateSubtaskRequest {
 }
 
 // ── Labels ──────────────────────────────────────────────────────────
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct Label {
-    pub id: String,
-    pub project_id: String,
-    pub name: String,
-    pub color: String,
-}
 
 #[derive(Debug, Deserialize)]
 pub struct CreateLabelRequest {
@@ -215,16 +164,6 @@ pub struct AddLabelToTaskRequest {
 
 // ── Comments ────────────────────────────────────────────────────────
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct Comment {
-    pub id: String,
-    pub task_id: String,
-    pub agent_id: String,
-    pub agent_name: Option<String>,
-    pub content: String,
-    pub created_at: String,
-}
-
 #[derive(Debug, Deserialize)]
 pub struct CreateCommentRequest {
     pub content: String,
@@ -242,40 +181,6 @@ pub struct SearchQuery {
     pub limit: i32,
     #[serde(default)]
     pub offset: i32,
-}
-
-// ── Dashboard ───────────────────────────────────────────────────────
-
-#[derive(Debug, Serialize)]
-pub struct Dashboard {
-    pub agent: Agent,
-    pub projects: Vec<ProjectSummary>,
-    pub overdue_tasks: Vec<Task>,
-    pub recent_activity: Vec<ActivityItem>,
-}
-
-#[derive(Debug, Serialize)]
-pub struct ProjectSummary {
-    pub project: Project,
-    pub task_counts: TaskCounts,
-}
-
-#[derive(Debug, Serialize)]
-pub struct TaskCounts {
-    pub total: i32,
-    pub pending: i32,
-    pub in_progress: i32,
-    pub done: i32,
-    pub cancelled: i32,
-}
-
-#[derive(Debug, Serialize)]
-pub struct ActivityItem {
-    pub kind: String,
-    pub task_id: String,
-    pub task_title: String,
-    pub project_name: String,
-    pub timestamp: String,
 }
 
 // ── Generic API response ────────────────────────────────────────────
@@ -298,19 +203,4 @@ impl<T: Serialize> ApiResponse<T> {
         }
     }
 
-    pub fn ok_msg(data: T, message: &str) -> Self {
-        Self {
-            success: true,
-            data: Some(data),
-            message: Some(message.to_string()),
-        }
-    }
-}
-
-#[derive(Debug, Serialize)]
-pub struct ListResponse<T: Serialize> {
-    pub items: Vec<T>,
-    pub total: i32,
-    pub limit: i32,
-    pub offset: i32,
 }

@@ -59,17 +59,12 @@ impl AppError {
         }
     }
 
-    pub fn internal(msg: &str) -> Self {
+    pub fn internal(_msg: &str) -> Self {
         Self {
             status: StatusCode::INTERNAL_SERVER_ERROR,
-            message: msg.to_string(),
+            message: "Internal server error".to_string(),
             hint: None,
         }
-    }
-
-    pub fn with_hint(mut self, hint: &str) -> Self {
-        self.hint = Some(hint.to_string());
-        self
     }
 }
 
@@ -85,8 +80,8 @@ impl IntoResponse for AppError {
 }
 
 impl From<worker::Error> for AppError {
-    fn from(err: worker::Error) -> Self {
-        AppError::internal(&format!("Worker error: {}", err))
+    fn from(_err: worker::Error) -> Self {
+        AppError::internal("")
     }
 }
 

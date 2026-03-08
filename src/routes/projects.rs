@@ -126,7 +126,11 @@ pub fn update(
 ) -> impl Future<Output = Result<impl IntoResponse, AppError>> + Send {
     WasmSend(async move {
         let db = env.d1("DB").map_err(AppError::from)?;
-        check_member(&db, &project_id, &auth.id).await?;
+
+        let role = get_member_role(&db, &project_id, &auth.id).await?;
+        if role != "owner" && role != "editor" {
+            return Err(AppError::forbidden("Only owners and editors can update this project"));
+        }
 
         if let Some(ref name) = body.name {
             validation::validate_required_text("name", name, 100)?;

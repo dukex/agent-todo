@@ -9,6 +9,7 @@ use worker::Env;
 use crate::auth::AuthAgent;
 use crate::error::AppError;
 use crate::models::*;
+use crate::validation;
 use crate::wasm_send::WasmSend;
 
 /// GET /api/v1/search?q=...&project_id=...&status=...&label=...
@@ -18,9 +19,7 @@ pub fn search(
     Query(query): Query<SearchQuery>,
 ) -> impl Future<Output = Result<impl IntoResponse, AppError>> + Send {
     WasmSend(async move {
-        if query.q.is_empty() {
-            return Err(AppError::bad_request("Search query 'q' is required"));
-        }
+        validation::validate_search_query(&query.q)?;
 
         let db = env.d1("DB").map_err(AppError::from)?;
 

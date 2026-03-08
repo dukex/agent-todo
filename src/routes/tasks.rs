@@ -26,9 +26,29 @@ pub fn create(
         validation::validate_optional_text("description", &Some(body.description.clone()), 10000)?;
         validation::validate_task_status(&body.status)?;
         validation::validate_priority(body.priority)?;
+        if let Some(ref due) = body.due_date {
+            if !due.is_empty() {
+                validation::validate_iso_date("due_date", due)?;
+            }
+        }
 
         let db = env.d1("DB").map_err(AppError::from)?;
         check_member(&db, &project_id, &auth.id).await?;
+
+        if let Some(ref assignee_id) = body.assignee_id {
+            if !assignee_id.is_empty() {
+                let exists = db
+                    .prepare("SELECT id FROM agents WHERE id = ?1 AND is_active = 1")
+                    .bind(&[assignee_id.clone().into()])
+                    .map_err(|e| AppError::internal(&e.to_string()))?
+                    .first::<serde_json::Value>(None)
+                    .await
+                    .map_err(|e| AppError::internal(&e.to_string()))?;
+                if exists.is_none() {
+                    return Err(AppError::bad_request("Assignee agent not found"));
+                }
+            }
+        }
 
         let id = uuid::Uuid::new_v4().to_string();
         let now = chrono::Utc::now().to_rfc3339();
@@ -256,12 +276,27 @@ pub fn update(
                 .run().await.map_err(|e| AppError::internal(&e.to_string()))?;
         }
         if let Some(ref due) = body.due_date {
-            db.prepare("UPDATE tasks SET due_date = ?1, updated_at = ?2 WHERE id = ?3")
+            if !due.is_empty() {
+                validation::validate_iso_date("due_date", due)?;
+            }
+            db.prepare("UPDATE tasks SET due_date = NULLIF(?1, ''), updated_at = ?2 WHERE id = ?3")
                 .bind(&[due.clone().into(), now.clone().into(), task_id.clone().into()])
                 .map_err(|e| AppError::internal(&e.to_string()))?
                 .run().await.map_err(|e| AppError::internal(&e.to_string()))?;
         }
         if let Some(ref assignee) = body.assignee_id {
+            if !assignee.is_empty() {
+                let exists = db
+                    .prepare("SELECT id FROM agents WHERE id = ?1 AND is_active = 1")
+                    .bind(&[assignee.clone().into()])
+                    .map_err(|e| AppError::internal(&e.to_string()))?
+                    .first::<serde_json::Value>(None)
+                    .await
+                    .map_err(|e| AppError::internal(&e.to_string()))?;
+                if exists.is_none() {
+                    return Err(AppError::bad_request("Assignee agent not found"));
+                }
+            }
             db.prepare("UPDATE tasks SET assignee_id = NULLIF(?1, ''), updated_at = ?2 WHERE id = ?3")
                 .bind(&[assignee.clone().into(), now.clone().into(), task_id.clone().into()])
                 .map_err(|e| AppError::internal(&e.to_string()))?

@@ -78,7 +78,7 @@ pub async fn try_authenticate(parts: &Parts, env: &Arc<worker::Env>) -> Option<A
     let cache_value = format!("{}:{}", id, name);
     let _ = kv
         .put(&cache_key, &cache_value)
-        .map(|p| p.expiration_ttl(300))
+        .map(|p| p.expiration_ttl(60))
         .ok();
 
     Some(AuthAgent { id, name })
